@@ -14,10 +14,10 @@ Please do not open a public issue for a suspected vulnerability first.
 
 ## What is in scope
 
-<!-- scaffold: the untrusted inputs this package handles, and each property a crafted input must not
-break (an escape, an unbounded allocation, a panic). One bullet each, naming the API. -->
+- `Clean(b)` takes arbitrary bytes, usually a file a third party wrote. For any input it must not panic, must not index out of range on a truncated string, comment or UTF-16/32 sequence, and must allocate in proportion to the input (the output is at most a constant factor larger than the input, plus the newlines it keeps).
 
 ## What is out of scope
 
-<!-- scaffold: what the caller is trusted to have checked already, and behaviour that is intended
-rather than a vulnerability. -->
+- Whether the cleaned bytes are valid and what they mean: that is `encoding/json`'s, and the caller must check its error.
+- Json.NET behaviour that is deliberately not matched (hex and octal integers, string-target readings of `.5` or `NaN`): see the README.
+- Resource limits on very large inputs: the caller bounds the size it reads.
