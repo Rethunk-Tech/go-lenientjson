@@ -45,6 +45,22 @@ func main() {
 | Bare decimal point | `.5` becomes `0.5` and `5.` becomes `5.0`, right for a numeric target only. |
 | Input slice | Not modified; the result is a new slice. |
 
+### Not JSONC, not JSON5
+
+| Feature | This module (Json.NET) | JSONC | JWCC (hujson) | JSON5 |
+| --- | --- | --- | --- | --- |
+| Comments, trailing commas | yes | comments; commas tolerated by VS Code | yes | yes |
+| Single quotes, unquoted keys | yes | no | no | yes |
+| `NaN`, `Infinity` | as `null` | no | no | as floats |
+| `undefined`, elided `[1,,2]`, `{"o":,}` | as `null` | no | no | no |
+| Raw newline or tab in a string | yes | no | no | no |
+| UTF-16 picked by its BOM | yes | no | no | no |
+| `.5`, `5.` | yes | no | no | yes |
+| Hex `0x1F`, octal `012` | no (Json.NET reads them; the value depends on the target type) | no | no | hex only |
+
+A comment between a quoted key and its colon (`{"a" /*c*/ : 1}`) cleans to valid JSON although Json.NET refuses
+it; matching that needs a token-level parser, and no file depends on the refusal.
+
 ## Requirements
 
 Go 1.27.3 or newer, plus `lefthook` and `gitleaks` on PATH if you want the git hooks.
