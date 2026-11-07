@@ -120,8 +120,11 @@ func appendWord(out, b []byte, i, j int) []byte {
 		out = append(out, '"')
 		out = append(out, word...)
 		return append(out, '"')
-	case slices.Contains([]string{"NaN", "Infinity", "undefined"}, string(word)):
+	case string(word) == "Infinity":
 		out = bytes.TrimSuffix(out, []byte("-"))
+		return append(out, "null"...)
+	case string(word) == "NaN" || string(word) == "undefined":
+		// Json.NET reads -Infinity but rejects a signed NaN or undefined, so the sign stays and the output is invalid.
 		return append(out, "null"...)
 	}
 	return append(out, word...)

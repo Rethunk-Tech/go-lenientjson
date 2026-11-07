@@ -175,3 +175,11 @@ func TestCleanKeepsLinesAcrossCommentsAndEncodings(t *testing.T) {
 		}
 	}
 }
+
+func TestCleanSignedNaNAndUndefinedStayInvalid(t *testing.T) {
+	for _, in := range []string{`{"a":-NaN}`, `[-undefined]`, `[1,-NaN]`} {
+		if json.Valid(Clean([]byte(in))) {
+			t.Errorf("%s cleaned to valid %q", in, Clean([]byte(in)))
+		}
+	}
+}
