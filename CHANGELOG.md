@@ -6,11 +6,18 @@ Notable changes to `go-lenientjson`. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-07
+
+### Fixed
+
+- `Clean` leaves a signed `NaN` or `undefined` invalid, as Json.NET does.
+
 ## [0.1.0] - 2026-10-29
 
 ### Added
 
 - `Clean` rewrites the bytes Json.NET reads (comments, trailing commas and elisions, single quotes, unquoted names, `NaN`/`Infinity`/`undefined`, bare decimal points, raw control characters, UTF-8/16/32 BOMs) as strict JSON for `encoding/json`, keeping source line numbers.
 
-[Unreleased]: https://github.com/Rethunk-Tech/go-lenientjson/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Rethunk-Tech/go-lenientjson/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Rethunk-Tech/go-lenientjson/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Rethunk-Tech/go-lenientjson/releases/tag/v0.1.0
