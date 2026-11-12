@@ -112,8 +112,12 @@ func appendControl(out []byte, c byte) []byte {
 func appendWord(out, b []byte, i, j int) []byte {
 	word := b[i:j]
 	k := j
-	for k < len(b) && slices.Contains([]byte(" \t\r\n"), b[k]) {
-		k++
+	for k < len(b) {
+		r, size := utf8.DecodeRune(b[k:])
+		if !unicode.IsSpace(r) {
+			break
+		}
+		k += size
 	}
 	switch {
 	case k < len(b) && b[k] == ':':
@@ -134,6 +138,11 @@ func appendWord(out, b []byte, i, j int) []byte {
 func normalise(b []byte) []byte {
 	out := make([]byte, 0, len(b))
 	for i := 0; i < len(b); i++ {
+		if r, size := utf8.DecodeRune(b[i:]); unicode.IsSpace(r) && r != ' ' && r != '\t' && r != '\n' && r != '\r' {
+			out = append(out, ' ')
+			i += size - 1
+			continue
+		}
 		switch c := b[i]; {
 		case c == '"' || c == '\'':
 			out, i = appendString(out, b, i)

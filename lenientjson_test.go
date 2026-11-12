@@ -193,3 +193,13 @@ func TestCleanDigitStartingPropertyName(t *testing.T) {
 		t.Fatalf("got %#v", got)
 	}
 }
+
+func TestCleanNonJSONWhitespace(t *testing.T) {
+	var got map[string]any
+	if err := json.Unmarshal(Clean([]byte("{a:\u00a01}")), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["a"] != float64(1) {
+		t.Fatalf("got %#v", got)
+	}
+}
