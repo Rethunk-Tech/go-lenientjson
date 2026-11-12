@@ -203,3 +203,13 @@ func TestCleanNonJSONWhitespace(t *testing.T) {
 		t.Fatalf("got %#v", got)
 	}
 }
+
+func TestCleanLineCommentEndsOnCR(t *testing.T) {
+	var got map[string]any
+	if err := json.Unmarshal(Clean([]byte("{//c\r\"a\":1}")), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["a"] != float64(1) {
+		t.Fatalf("got %#v", got)
+	}
+}

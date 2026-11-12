@@ -147,7 +147,10 @@ func normalise(b []byte) []byte {
 		case c == '"' || c == '\'':
 			out, i = appendString(out, b, i)
 		case c == '/' && i+1 < len(b) && b[i+1] == '/':
-			for i < len(b) && b[i] != '\n' {
+			for i < len(b) && b[i] != '\n' && b[i] != '\r' {
+				i++
+			}
+			if i < len(b) && b[i] == '\r' && i+1 < len(b) && b[i+1] == '\n' {
 				i++
 			}
 			out = append(out, '\n')
