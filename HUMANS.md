@@ -12,23 +12,23 @@ go get github.com/Rethunk-Tech/go-lenientjson
 package main
 
 import (
-	"encoding/json"
-	"fmt"
+ "encoding/json"
+ "fmt"
 
-	"github.com/Rethunk-Tech/go-lenientjson"
+ "github.com/Rethunk-Tech/go-lenientjson"
 )
 
 func main() {
-	raw := []byte("{\n  // comment\n  name: 'demo', tags: [1, 2,],\n}")
-	var v struct {
-		Name string `json:"name"`
-		Tags []int  `json:"tags"`
-	}
-	if err := json.Unmarshal(lenientjson.Clean(raw), &v); err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(v.Name, v.Tags)
+ raw := []byte("{\n  // comment\n  name: 'demo', tags: [1, 2,],\n}")
+ var v struct {
+  Name string `json:"name"`
+  Tags []int  `json:"tags"`
+ }
+ if err := json.Unmarshal(lenientjson.Clean(raw), &v); err != nil {
+  fmt.Println(err)
+  return
+ }
+ fmt.Println(v.Name, v.Tags)
 }
 ```
 
@@ -63,7 +63,7 @@ it; matching that needs a token-level parser, and no file depends on the refusal
 
 ## Requirements
 
-Go 1.27.3 or newer, plus `lefthook` and `gitleaks` on PATH if you want the git hooks.
+Go 1.27.4 or newer, plus `lefthook` and `gitleaks` on PATH if you want the git hooks.
 
 ```bash
 lefthook install
