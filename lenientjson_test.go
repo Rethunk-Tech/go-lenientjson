@@ -213,3 +213,10 @@ func TestCleanLineCommentEndsOnCR(t *testing.T) {
 		t.Fatalf("got %#v", got)
 	}
 }
+
+func TestCleanUnclosedBlockCommentDecoderRejects(t *testing.T) {
+	err := json.NewDecoder(bytes.NewReader(Clean([]byte(`{"o":1} /* x`)))).Decode(new(any))
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
