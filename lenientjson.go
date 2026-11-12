@@ -134,13 +134,21 @@ func appendWord(out, b []byte, i, j int) []byte {
 	return append(out, word...)
 }
 
+func extraSpaceSize(b []byte, i int) int {
+	r, size := utf8.DecodeRune(b[i:])
+	if r == ' ' || r == '\t' || r == '\n' || r == '\r' || !unicode.IsSpace(r) {
+		return 0
+	}
+	return size
+}
+
 // normalise drops comments and rewrites every non-strict token outside strings.
 func normalise(b []byte) []byte {
 	out := make([]byte, 0, len(b))
 	for i := 0; i < len(b); i++ {
-		if r, size := utf8.DecodeRune(b[i:]); unicode.IsSpace(r) && r != ' ' && r != '\t' && r != '\n' && r != '\r' {
+		if n := extraSpaceSize(b, i); n > 0 {
 			out = append(out, ' ')
-			i += size - 1
+			i += n - 1
 			continue
 		}
 		switch c := b[i]; {
