@@ -15,7 +15,7 @@ func FuzzClean(f *testing.F) {
 		[]byte("\xef\xbb\xbf" + `{"a":"x y","b":[1,null]}`),
 		utf16Of(`{"a":"x y","b":[1,null]}`, binary.LittleEndian, []byte{0xff, 0xfe}),
 		utf16Of(`{"a":"x y","b":[1,null]}`, binary.BigEndian, []byte{0xfe, 0xff}),
-		utf32Of(`{"a":"x y","b":[1,null]}`, binary.LittleEndian, []byte{0xff, 0xfe, 0, 0}),
+		utf32Of(`{"k":[1,2,],}`, binary.LittleEndian, []byte{0xff, 0xfe, 0, 0}),
 		utf32Of(`{"a":"x y","b":[1,null]}`, binary.BigEndian, []byte{0, 0, 0xfe, 0xff}),
 		[]byte(`{a:"x y",b:[1,undefined]}`),
 		[]byte(`{a:"x y",b:[1,-Infinity]}`),
@@ -46,8 +46,8 @@ func FuzzClean(f *testing.F) {
 	}
 	f.Fuzz(func(t *testing.T, in []byte) {
 		out := Clean(in)
-		if n, max := len(out), 16*(len(in)+8); n > max {
-			t.Fatalf("unbounded rewrite: in=%d out=%d max=%d", len(in), n, max)
+		if n, limit := len(out), 16*(len(in)+8); n > limit {
+			t.Fatalf("unbounded rewrite: in=%d out=%d max=%d", len(in), n, limit)
 		}
 	})
 }
