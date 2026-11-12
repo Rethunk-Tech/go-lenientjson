@@ -152,7 +152,7 @@ func normalise(b []byte) []byte {
 			out = append(out, bytes.Repeat([]byte("\n"), bytes.Count(b[i:i+end+4], []byte("\n")))...)
 			out = append(out, ' ')
 			i += end + 3
-		case isIdent(c) && (c < '0' || c > '9'):
+		case isIdent(c):
 			j := i
 			for j < len(b) && isIdent(b[j]) {
 				j++

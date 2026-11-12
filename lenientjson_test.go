@@ -183,3 +183,13 @@ func TestCleanSignedNaNAndUndefinedStayInvalid(t *testing.T) {
 		}
 	}
 }
+
+func TestCleanDigitStartingPropertyName(t *testing.T) {
+	var got map[string]any
+	if err := json.Unmarshal(Clean([]byte(`{1:2}`)), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["1"] != float64(2) {
+		t.Fatalf("got %#v", got)
+	}
+}
