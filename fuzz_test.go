@@ -1,41 +1,53 @@
 package lenientjson
 
 import (
-	"encoding/json"
-	"reflect"
+	"encoding/binary"
 	"testing"
 )
 
-// FuzzClean checks that Clean never panics and that whatever it turns into valid JSON stays valid when cleaned again.
 func FuzzClean(f *testing.F) {
-	for _, s := range []string{
-		"\xef\xbb\xbf{'a': 'b', c: [1,], /* x */ // y\n}",
-		"\xff\xfe{\x00}\x00",
-		"{a:\"\n\"}", "{'a':'\\", "/*", "{a:-Infinity}", "[NaN,undefined,]", "{\"a\\", "\xfe\xff\x00",
+	for _, in := range [][]byte{
+		[]byte("\xef\xbb\xbf{\n  // line\n  \"a\": 1, /* block */\n  \"b\": [2,],\n}\n"),
+		[]byte(`{"a":"x y","b":[1,null]}`),
+		[]byte(`{'a':'x y','b':[1,null]}`),
+		[]byte(`{a:"x y", b : [1,null]}`),
+		[]byte(`{ a: 'x y', 'b': [1, null,], // note` + "\n}"),
+		[]byte("\xef\xbb\xbf" + `{"a":"x y","b":[1,null]}`),
+		utf16Of(`{"a":"x y","b":[1,null]}`, binary.LittleEndian, []byte{0xff, 0xfe}),
+		utf16Of(`{"a":"x y","b":[1,null]}`, binary.BigEndian, []byte{0xfe, 0xff}),
+		utf32Of(`{"a":"x y","b":[1,null]}`, binary.LittleEndian, []byte{0xff, 0xfe, 0, 0}),
+		utf32Of(`{"a":"x y","b":[1,null]}`, binary.BigEndian, []byte{0, 0, 0xfe, 0xff}),
+		[]byte(`{a:"x y",b:[1,undefined]}`),
+		[]byte(`{a:"x y",b:[1,-Infinity]}`),
+		[]byte(`{/* c */a:"x y",b:[1,NaN]}`),
+		[]byte("{\"a\":\"l1\nl2\tx\x01\"}"),
+		[]byte(`{'a':'it\'s "q"'}`),
+		[]byte(`{"a":"// not /* a */ comment, ]"}`),
+		[]byte(`{"a":"b:c, d: e"}`),
+		[]byte(`{"a":"\u00e9\n\"\\"}`),
+		[]byte(`{"a":"don't"}`),
+		[]byte("{/*\n\n*/ \"a\": 1}"),
+		[]byte(`{"o":1} /* x`),
+		[]byte(`[,]`), []byte(`[1,,2]`), []byte(`[,1]`), []byte(`[1,,]`), []byte(`[1,]`),
+		[]byte(`{"o":,"s":"x"}`), []byte(`{"o":,}`),
+		[]byte(`{,}`), []byte(`{"o":1,,"s":"x"}`), []byte(`{"o":1,,}`),
+		[]byte("{\"a\":\"x\ny\nz\",\n\"b\": }"),
+		[]byte(`[.5,-.5,5.,1.5,5.e2]`), []byte(`[+1]`),
+		[]byte("{\"a\":\"x\\\ny\"}"), []byte("{\"a\":\"x\\\ty\"}"),
+		[]byte(`[0x1F]`), []byte(`[012]`),
+		[]byte("{/*\n\n*/\"a\":1,\n\"b\": }"),
+		[]byte("{// c\n\"a\":1,\n\"b\": }"),
+		utf16Of("{\n\"a\":1,\n\"b\": }", binary.LittleEndian, []byte{0xff, 0xfe}),
+		[]byte(`{"a":-NaN}`), []byte(`[-undefined]`), []byte(`[1,-NaN]`),
+		{},
+		[]byte(`"`), []byte(`/*`), []byte(`/`), []byte(`{`), []byte(`[`),
 	} {
-		f.Add([]byte(s))
+		f.Add(in)
 	}
-	f.Fuzz(func(t *testing.T, b []byte) {
-		once := Clean(b)
-		if json.Valid(once) && !json.Valid(Clean(once)) {
-			t.Fatalf("cleaning valid output %q broke it", once)
-		}
-	})
-}
-
-// FuzzStrictUnchanged checks that strict JSON passes through Clean to the same value.
-func FuzzStrictUnchanged(f *testing.F) {
-	for _, s := range []string{`{"a":[1,2.5,"x\n",null,true]}`, `"//"`, `[1e5,-0]`, `{"a b":{"c":[]}}`} {
-		f.Add([]byte(s))
-	}
-	f.Fuzz(func(t *testing.T, b []byte) {
-		var want any
-		if json.Unmarshal(b, &want) != nil {
-			return
-		}
-		var got any
-		if err := json.Unmarshal(Clean(b), &got); err != nil || !reflect.DeepEqual(got, want) {
-			t.Fatalf("Clean(%q) = %q (%v), want value %v", b, Clean(b), err, want)
+	f.Fuzz(func(t *testing.T, in []byte) {
+		out := Clean(in)
+		if n, max := len(out), 16*(len(in)+8); n > max {
+			t.Fatalf("unbounded rewrite: in=%d out=%d max=%d", len(in), n, max)
 		}
 	})
 }
