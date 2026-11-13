@@ -224,7 +224,7 @@ func TestCleanUnclosedBlockCommentDecoderRejects(t *testing.T) {
 func TestCleanWhitespaceAndCommentsAroundBareWords(t *testing.T) {
 	for _, in := range []string{
 		"{\"a\": 1 }", "{\"a\": true　,\"b\":2}", "{a : 1}",
-		"{a /*c*/ : 1}", "{a // c\n : 1}",
+		"{/*c*/ a: 1}", "{a: /*c*/ 1}",
 	} {
 		var got map[string]any
 		if err := json.Unmarshal(Clean([]byte(in)), &got); err != nil {
@@ -249,5 +249,16 @@ func TestTryCleanRefusesATruncatedCodeUnit(t *testing.T) {
 	}
 	if out, err := TryClean(utf16Of("12", binary.LittleEndian, []byte{0xff, 0xfe})); err != nil || string(out) != "12" {
 		t.Errorf("whole units: %q %v", out, err)
+	}
+}
+
+// Json.NET reads no comment between a property name and its colon.
+func TestCleanCommentBeforeColonStaysInvalid(t *testing.T) {
+	for _, in := range []string{
+		"{a /*c*/ : 1}", "{a // c\n : 1}", `{"a"/*c*/:1}`, "{'a'\n//c\n:1}", `{"a" /*c*/ /*d*/ :1}`, `{/*c*/:1}`,
+	} {
+		if out := Clean([]byte(in)); json.Valid(out) {
+			t.Errorf("%q cleaned to valid %q", in, out)
+		}
 	}
 }

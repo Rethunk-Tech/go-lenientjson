@@ -182,16 +182,37 @@ func extraSpaceSize(b []byte, i int) int {
 	return size
 }
 
+// appendPoint writes the decimal point at b[i] with a zero on whichever side lacks a digit. Right for a numeric target;
+// Json.NET reads {"s":.5} as the string ".5" for a string target, which Clean cannot see.
+func appendPoint(out, b []byte, i int) []byte {
+	digitBefore := len(out) > 0 && out[len(out)-1] >= '0' && out[len(out)-1] <= '9'
+	digitAfter := i+1 < len(b) && b[i+1] >= '0' && b[i+1] <= '9'
+	switch {
+	case !digitBefore && digitAfter:
+		return append(out, '0', '.')
+	case digitBefore && !digitAfter:
+		return append(out, '.', '0')
+	}
+	return append(out, '.')
+}
+
 // normalise drops comments and rewrites every non-strict token outside strings.
 func normalise(b []byte) []byte {
 	out := make([]byte, 0, len(b))
+	afterComment := false // only whitespace since the last comment
 	for i := 0; i < len(b); i++ {
 		if n := extraSpaceSize(b, i); n > 0 {
 			out = append(out, ' ')
 			i += n - 1
 			continue
 		}
-		switch c := b[i]; {
+		c := b[i]
+		if c == ':' && afterComment {
+			// Json.NET rejects a comment between a property name and its colon; a bare '/' keeps the result invalid.
+			out = append(out, '/')
+		}
+		afterComment = afterComment && (c == ' ' || c == '\t' || c == '\n' || c == '\r')
+		switch {
 		case c == '"' || c == '\'':
 			out, i = appendString(out, b, i)
 		case c == '/' && i+1 < len(b) && b[i+1] == '/':
@@ -202,6 +223,7 @@ func normalise(b []byte) []byte {
 				i++
 			}
 			out = append(out, '\n')
+			afterComment = true
 		case c == '/' && i+1 < len(b) && b[i+1] == '*':
 			end := bytes.Index(b[i+2:], []byte("*/"))
 			if end < 0 {
@@ -212,6 +234,7 @@ func normalise(b []byte) []byte {
 			out = append(out, bytes.Repeat([]byte("\n"), bytes.Count(b[i:i+end+4], []byte("\n")))...)
 			out = append(out, ' ')
 			i += end + 3
+			afterComment = true
 		case isIdent(c):
 			j := i
 			for j < len(b) && isIdent(b[j]) && extraSpaceSize(b, j) == 0 {
@@ -220,17 +243,7 @@ func normalise(b []byte) []byte {
 			out = appendWord(out, b, i, j)
 			i = j - 1
 		case c == '.':
-			// Right for a numeric target; Json.NET reads {"s":.5} as the string ".5" for a string target, which Clean cannot see.
-			digitBefore := len(out) > 0 && out[len(out)-1] >= '0' && out[len(out)-1] <= '9'
-			digitAfter := i+1 < len(b) && b[i+1] >= '0' && b[i+1] <= '9'
-			switch {
-			case !digitBefore && digitAfter:
-				out = append(out, '0', '.')
-			case digitBefore && !digitAfter:
-				out = append(out, '.', '0')
-			default:
-				out = append(out, c)
-			}
+			out = appendPoint(out, b, i)
 		default:
 			out = append(out, c)
 		}
