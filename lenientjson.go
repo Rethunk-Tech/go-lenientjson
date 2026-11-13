@@ -155,7 +155,7 @@ func appendWord(out, b []byte, i, j int) []byte {
 func nextToken(b []byte, i int) int {
 	for i < len(b) {
 		switch r, size := utf8.DecodeRune(b[i:]); {
-		case unicode.IsSpace(r):
+		case isSpace(r):
 			i += size
 		case bytes.HasPrefix(b[i:], []byte("//")):
 			for i < len(b) && b[i] != '\n' && b[i] != '\r' {
@@ -176,10 +176,15 @@ func nextToken(b []byte, i int) int {
 
 func extraSpaceSize(b []byte, i int) int {
 	r, size := utf8.DecodeRune(b[i:])
-	if r == ' ' || r == '\t' || r == '\n' || r == '\r' || !unicode.IsSpace(r) {
-		return 0
+	if isSpace(r) && r != ' ' && r != '\t' && r != '\n' && r != '\r' {
+		return size
 	}
-	return size
+	return 0
+}
+
+// isSpace is Json.NET's whitespace outside a string: char.IsWhiteSpace, plus NUL, which its reader skips.
+func isSpace(r rune) bool {
+	return r == 0 || unicode.IsSpace(r)
 }
 
 // appendPoint writes the decimal point at b[i] with a zero on whichever side lacks a digit. Right for a numeric target;

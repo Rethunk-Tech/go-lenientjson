@@ -262,3 +262,18 @@ func TestCleanCommentBeforeColonStaysInvalid(t *testing.T) {
 		}
 	}
 }
+
+// Json.NET skips a NUL outside a string, so a NUL-padded config still loads.
+func TestCleanNULOutsideStringIsWhitespace(t *testing.T) {
+	for _, in := range []string{"{\"a\":1}\x00\x00", "{\x00a\x00:\x001}", "[1,\x00]"} {
+		var got map[string]any
+		var arr []any
+		out := Clean([]byte(in))
+		if json.Unmarshal(out, &got) != nil && json.Unmarshal(out, &arr) != nil {
+			t.Errorf("%q cleaned to invalid %q", in, out)
+		}
+	}
+	if got := Clean([]byte("\"a\x00b\"")); string(got) != `"a\u0000b"` {
+		t.Errorf("NUL in a string: got %q", got)
+	}
+}
