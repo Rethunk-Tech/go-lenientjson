@@ -277,3 +277,17 @@ func TestCleanNULOutsideStringIsWhitespace(t *testing.T) {
 		t.Errorf("NUL in a string: got %q", got)
 	}
 }
+
+// Json.NET's unquoted name is letters and digits by char.IsLetterOrDigit (one UTF-16 unit each), '_' and '$'.
+func TestCleanUnquotedNameCharacters(t *testing.T) {
+	for _, in := range []string{"{k“:1}", "{a·b:1}", "{aⅣ:1}", "{\U0001d49c:1}", "{\xc3:1}"} {
+		if out := Clean([]byte(in)); json.Valid(out) {
+			t.Errorf("%q cleaned to valid %q", in, out)
+		}
+	}
+	for _, in := range []string{"{ä:1}", "{٣:1}", "{$_a1:1}"} {
+		if out := Clean([]byte(in)); !json.Valid(out) {
+			t.Errorf("%q cleaned to invalid %q", in, out)
+		}
+	}
+}

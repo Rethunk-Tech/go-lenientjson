@@ -79,8 +79,19 @@ func utf32Bytes(b []byte, order binary.ByteOrder) ([]byte, error) {
 	return []byte(sb.String()), nil
 }
 
-func isIdent(c byte) bool {
-	return c == '_' || c == '$' || c >= 0x80 || c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z'
+// identSize is the byte length of the bare-word character at b[i], or 0. Json.NET takes '_', '$' and what
+// char.IsLetterOrDigit accepts, which tests one UTF-16 unit, so a letter outside the BMP is not one.
+func identSize(b []byte, i int) int {
+	if c := b[i]; c < utf8.RuneSelf {
+		if c == '_' || c == '$' || c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' {
+			return 1
+		}
+		return 0
+	}
+	if r, size := utf8.DecodeRune(b[i:]); r <= 0xffff && (unicode.IsLetter(r) || unicode.IsDigit(r)) {
+		return size
+	}
+	return 0
 }
 
 // appendString copies the string literal opening at b[i] as a double-quoted JSON string and returns the index of its
@@ -240,10 +251,10 @@ func normalise(b []byte) []byte {
 			out = append(out, ' ')
 			i += end + 3
 			afterComment = true
-		case isIdent(c):
+		case identSize(b, i) > 0:
 			j := i
-			for j < len(b) && isIdent(b[j]) && extraSpaceSize(b, j) == 0 {
-				j++
+			for j < len(b) && identSize(b, j) > 0 {
+				j += identSize(b, j)
 			}
 			out = appendWord(out, b, i, j)
 			i = j - 1
