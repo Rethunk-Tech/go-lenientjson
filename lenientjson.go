@@ -3,6 +3,7 @@ package lenientjson
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -11,18 +12,35 @@ import (
 	"unicode/utf8"
 )
 
+// ErrTruncated reports a UTF-16 or UTF-32 input that ends inside a code unit.
+var ErrTruncated = errors.New("lenientjson: input ends inside a UTF-16 or UTF-32 code unit")
+
 // Clean rewrites b as strict JSON where Json.NET would read it. Text Json.NET rejects is left for encoding/json to
 // reject; string contents are never rewritten beyond escaping. Newlines are kept, so a *json.SyntaxError's line counted
-// over the result is the source line.
+// over the result is the source line. Input that ends inside a UTF-16 or UTF-32 code unit is returned unchanged, which
+// encoding/json rejects; TryClean reports it as an error.
 func Clean(b []byte) []byte {
-	return dropTrailingCommas(normalise(decode(b)))
+	out, err := TryClean(b)
+	if err != nil {
+		return b
+	}
+	return out
+}
+
+// TryClean is Clean that returns ErrTruncated for input ending inside a UTF-16 or UTF-32 code unit.
+func TryClean(b []byte) ([]byte, error) {
+	text, err := decode(b)
+	if err != nil {
+		return nil, err
+	}
+	return dropTrailingCommas(normalise(text)), nil
 }
 
 // decode returns b as UTF-8 text without its BOM; .NET File.ReadAllText picks the encoding from the BOM the same way.
-func decode(b []byte) []byte {
+func decode(b []byte) ([]byte, error) {
 	switch {
 	case bytes.HasPrefix(b, []byte("\xef\xbb\xbf")):
-		return b[3:]
+		return b[3:], nil
 	case bytes.HasPrefix(b, []byte("\xff\xfe\x00\x00")):
 		return utf32Bytes(b[4:], binary.LittleEndian)
 	case bytes.HasPrefix(b, []byte("\x00\x00\xfe\xff")):
@@ -32,18 +50,24 @@ func decode(b []byte) []byte {
 	case bytes.HasPrefix(b, []byte("\xfe\xff")):
 		return utf16Bytes(b[2:], binary.BigEndian)
 	}
-	return b
+	return b, nil
 }
 
-func utf16Bytes(b []byte, order binary.ByteOrder) []byte {
+func utf16Bytes(b []byte, order binary.ByteOrder) ([]byte, error) {
+	if len(b)%2 != 0 {
+		return nil, ErrTruncated
+	}
 	units := make([]uint16, len(b)/2)
 	for i := range units {
 		units[i] = order.Uint16(b[2*i:])
 	}
-	return []byte(string(utf16.Decode(units)))
+	return []byte(string(utf16.Decode(units))), nil
 }
 
-func utf32Bytes(b []byte, order binary.ByteOrder) []byte {
+func utf32Bytes(b []byte, order binary.ByteOrder) ([]byte, error) {
+	if len(b)%4 != 0 {
+		return nil, ErrTruncated
+	}
 	var sb strings.Builder
 	for ; len(b) >= 4; b = b[4:] {
 		r := utf8.RuneError
@@ -52,7 +76,7 @@ func utf32Bytes(b []byte, order binary.ByteOrder) []byte {
 		}
 		sb.WriteRune(r) // a surrogate also becomes U+FFFD
 	}
-	return []byte(sb.String())
+	return []byte(sb.String()), nil
 }
 
 func isIdent(c byte) bool {

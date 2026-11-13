@@ -232,3 +232,22 @@ func TestCleanWhitespaceAndCommentsAroundBareWords(t *testing.T) {
 		}
 	}
 }
+
+func TestTryCleanRefusesATruncatedCodeUnit(t *testing.T) {
+	for name, in := range map[string][]byte{
+		"utf16 le": {0xff, 0xfe, '1', 0, '2'},
+		"utf16 be": {0xfe, 0xff, 0, '1', 0},
+		"utf32 le": {0xff, 0xfe, 0, 0, '1', 0, 0, 0, '2'},
+		"utf32 be": {0, 0, 0xfe, 0xff, 0, 0, 0, '1', 0, 0},
+	} {
+		if _, err := TryClean(in); !errors.Is(err, ErrTruncated) {
+			t.Errorf("%s: TryClean err = %v", name, err)
+		}
+		if json.Unmarshal(Clean(in), new(any)) == nil {
+			t.Errorf("%s: Clean output parsed", name)
+		}
+	}
+	if out, err := TryClean(utf16Of("12", binary.LittleEndian, []byte{0xff, 0xfe})); err != nil || string(out) != "12" {
+		t.Errorf("whole units: %q %v", out, err)
+	}
+}
