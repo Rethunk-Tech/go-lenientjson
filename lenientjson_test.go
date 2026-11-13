@@ -220,3 +220,15 @@ func TestCleanUnclosedBlockCommentDecoderRejects(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestCleanWhitespaceAndCommentsAroundBareWords(t *testing.T) {
+	for _, in := range []string{
+		"{\"a\": 1 }", "{\"a\": true　,\"b\":2}", "{a : 1}",
+		"{a /*c*/ : 1}", "{a // c\n : 1}",
+	} {
+		var got map[string]any
+		if err := json.Unmarshal(Clean([]byte(in)), &got); err != nil {
+			t.Errorf("%q: %v", in, err)
+		}
+	}
+}

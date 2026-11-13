@@ -111,14 +111,7 @@ func appendControl(out []byte, c byte) []byte {
 // anything else is left for encoding/json to accept (true, false, null, a number's exponent) or reject.
 func appendWord(out, b []byte, i, j int) []byte {
 	word := b[i:j]
-	k := j
-	for k < len(b) {
-		r, size := utf8.DecodeRune(b[k:])
-		if !unicode.IsSpace(r) {
-			break
-		}
-		k += size
-	}
+	k := nextToken(b, j)
 	switch {
 	case k < len(b) && b[k] == ':':
 		out = append(out, '"')
@@ -132,6 +125,29 @@ func appendWord(out, b []byte, i, j int) []byte {
 		return append(out, "null"...)
 	}
 	return append(out, word...)
+}
+
+// nextToken is the index of the first byte at or after i that is neither whitespace nor inside a comment.
+func nextToken(b []byte, i int) int {
+	for i < len(b) {
+		switch r, size := utf8.DecodeRune(b[i:]); {
+		case unicode.IsSpace(r):
+			i += size
+		case bytes.HasPrefix(b[i:], []byte("//")):
+			for i < len(b) && b[i] != '\n' && b[i] != '\r' {
+				i++
+			}
+		case bytes.HasPrefix(b[i:], []byte("/*")):
+			end := bytes.Index(b[i+2:], []byte("*/"))
+			if end < 0 {
+				return len(b)
+			}
+			i += end + 4
+		default:
+			return i
+		}
+	}
+	return i
 }
 
 func extraSpaceSize(b []byte, i int) int {
@@ -174,7 +190,7 @@ func normalise(b []byte) []byte {
 			i += end + 3
 		case isIdent(c):
 			j := i
-			for j < len(b) && isIdent(b[j]) {
+			for j < len(b) && isIdent(b[j]) && extraSpaceSize(b, j) == 0 {
 				j++
 			}
 			out = appendWord(out, b, i, j)
