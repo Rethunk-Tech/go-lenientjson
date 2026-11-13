@@ -1,7 +1,9 @@
 package lenientjson
 
 import (
+	"bytes"
 	"encoding/binary"
+	"encoding/json"
 	"testing"
 )
 
@@ -48,6 +50,12 @@ func FuzzClean(f *testing.F) {
 		out := Clean(in)
 		if n, limit := len(out), 16*(len(in)+8); n > limit {
 			t.Fatalf("unbounded rewrite: in=%d out=%d max=%d", len(in), n, limit)
+		}
+		if json.Valid(in) && !bytes.Equal(out, in) {
+			t.Fatalf("strict JSON rewritten: in=%q out=%q", in, out)
+		}
+		if json.Valid(out) && !bytes.Equal(Clean(out), out) {
+			t.Fatalf("not idempotent: out=%q again=%q", out, Clean(out))
 		}
 	})
 }
