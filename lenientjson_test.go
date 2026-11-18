@@ -73,6 +73,7 @@ func TestCleanNewtonsoftForms(t *testing.T) {
 func TestCleanStringContents(t *testing.T) {
 	for name, tc := range map[string]struct{ in, want string }{
 		"literal newline and tab": {"{\"a\":\"l1\nl2\tx\x01\"}", "l1\nl2\tx\x01"},
+		"literal carriage return": {"{\"a\":\"x\ry\"}", "x\ry"},
 		"apostrophe escape":       {`{'a':'it\'s "q"'}`, `it's "q"`},
 		"comment markers":         {`{"a":"// not /* a */ comment, ]"}`, `// not /* a */ comment, ]`},
 		"unquoted lookalike":      {`{"a":"b:c, d: e"}`, `b:c, d: e`},
@@ -97,6 +98,14 @@ func TestCleanKeepsBlockCommentNewlines(t *testing.T) {
 func TestCleanUnclosedBlockCommentIsInvalid(t *testing.T) {
 	if json.Valid(Clean([]byte(`{"o":1} /* x`))) {
 		t.Fatal("unclosed block comment accepted")
+	}
+}
+
+// An unclosed /* after a word hides the colon from lookahead, so the word is not a property name.
+func TestBareWordIsNotQuotedAcrossAnUnclosedBlockComment(t *testing.T) {
+	in := []byte("key /* : 1")
+	if got := appendWord(nil, in, 0, 3); string(got) != "key" {
+		t.Fatalf("got %q", got)
 	}
 }
 
