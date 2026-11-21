@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Package `lenientjson` rewrites the JSON that Json.NET reads into strict JSON for `encoding/json`. It exports `Clean` only and imports the standard library only; it never imports a consumer package.
+Package `lenientjson` rewrites the JSON that Json.NET reads into strict JSON for `encoding/json`. It exports `Clean`, `TryClean` and `ErrTruncated` and imports the standard library only; it never imports a consumer package.
 
 ## Gate
 
@@ -13,7 +13,7 @@ cannot resolve that check from PATH.
 - `Clean` is `decode`, `normalise`, `dropTrailingCommas` in that order. Comment and string handling live in `normalise`; container-aware comma handling needs the cleaned text, so it runs second.
 - Newlines are never dropped (comments keep theirs; a raw newline in a string is paid back after the closing quote), because callers derive a source line from a `*json.SyntaxError` over the output.
 - A rejected input stays invalid rather than being repaired: an unclosed `/*` is emitted as a bare `/*`, and a backslash before a raw control character is passed through, so `encoding/json` refuses both as Json.NET does.
-- Everything stays unexported; the single entry point keeps callers independent of the pass order.
+- Everything stays unexported; the entry points keep callers independent of the pass order.
 - No existing library covers the format: the JSON5 readers (titanous, yosuke-furukawa) and the JSONC/JWCC ones
   (hujson, muhammadmuzzammil1998) passed 4 to 8 of the 16 reference cases, none reads UTF-16, and the JSON5 ones
   decode straight to Go values, so a caller cannot get the cleaned bytes for `json.Decoder` or a line-numbered error.
@@ -22,5 +22,5 @@ cannot resolve that check from PATH.
 
 | File | Holds |
 | --- | --- |
-| `lenientjson.go` | `Clean` and its passes: BOM decoding, token rewriting, comma and elision handling |
+| `lenientjson.go` | `Clean`, `TryClean` and their passes: BOM decoding, token rewriting, comma and elision handling |
 | `doc.go` | Package documentation |

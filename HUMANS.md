@@ -37,6 +37,7 @@ func main() {
 | Contract | Behaviour |
 | --- | --- |
 | `Clean(b) []byte` | Never fails and never panics; the result may still be invalid, and `encoding/json` reports that with an offset. |
+| `TryClean(b) ([]byte, error)` | `Clean` that returns `ErrTruncated` for input ending inside a UTF-16 or UTF-32 code unit. |
 | Rejected input | Text Json.NET rejects is left invalid: an unclosed `/*`, `{,}`, `{"o":1,,"s":"x"}`, `+1`, `0x1F`, `012`, a backslash before a raw control character. |
 | Strict JSON | Unmarshals to the same value before and after `Clean`. |
 | Newlines | Every newline of the source, including those inside comments and raw-newline strings, is in the output, so the line of a `*json.SyntaxError` counted over the output is the source line. |
